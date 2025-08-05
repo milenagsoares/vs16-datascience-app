@@ -1,4 +1,3 @@
-# Passo 3: Construir o Aplicativo Dash com Bootstrap
 # O aplicativo será composto de duas partes principais: o layout (como ele se parece) e os callbacks (como ele interage).
 
 # --- 1. Importar as bibliotecas necessárias ---
@@ -7,7 +6,7 @@
 # pandas (para manipulação de dados) e dash_bootstrap_components (para Bootstrap).
 
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, dash_table
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
@@ -47,12 +46,11 @@ df['cp_label'] = df['cp'].map({
     4: 'Assintomático'
 })
 
-# iinicializar o aplicativo Dash com tema Bootstrap ---
+# iinicializar com tema Bootstrap ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# --- 4. Layout do aplicativo com Bootstrap ---
+# Layout
 app.layout = dbc.Container([
-    # Cabeçalho
     dbc.Row([
         dbc.Col([
             html.H1("🫀 Análise de Doenças Cardíacas", 
@@ -155,7 +153,7 @@ app.layout = dbc.Container([
         ])
     ]),
     
-    # Primeira linha de gráficos
+    
     dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -191,15 +189,114 @@ app.layout = dbc.Container([
                 ])
             ])
         ], width=6)
+    ], className="mb-4"),
+    
+    # Seção da Tabela Interativa
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.H4("📋 Tabela de Dados Interativa", className="mb-0"),
+                    html.P("Clique em uma linha para ver detalhes do paciente", className="text-muted mb-0 mt-1")
+                ]),
+                dbc.CardBody([
+                    # Filtros para a tabela
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Label("Filtrar por diagnóstico:", className="fw-bold"),
+                            dcc.Dropdown(
+                                id='filtro-diagnostico',
+                                options=[
+                                    {'label': 'Todos os pacientes', 'value': 'all'},
+                                    {'label': 'Sem doença cardíaca', 'value': 0},
+                                    {'label': 'Com doença cardíaca', 'value': 1}
+                                ],
+                                value='all',
+                                className="mb-3"
+                            )
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Label("Número de registros:", className="fw-bold"),
+                            dcc.Dropdown(
+                                id='num-registros',
+                                options=[
+                                    {'label': '10 registros', 'value': 10},
+                                    {'label': '25 registros', 'value': 25},
+                                    {'label': '50 registros', 'value': 50},
+                                    {'label': '100 registros', 'value': 100}
+                                ],
+                                value=25,
+                                className="mb-3"
+                            )
+                        ], width=6)
+                    ]),
+                    
+                    # Tabela
+                    dash_table.DataTable(
+                        id='tabela-dados',
+                        columns=[
+                            {'name': 'ID', 'id': 'id', 'type': 'numeric'},
+                            {'name': 'Idade', 'id': 'age', 'type': 'numeric'},
+                            {'name': 'Sexo', 'id': 'sex_label', 'type': 'text'},
+                            {'name': 'Tipo de Dor', 'id': 'cp_label', 'type': 'text'},
+                            {'name': 'Pressão Arterial', 'id': 'trestbps', 'type': 'numeric'},
+                            {'name': 'Colesterol', 'id': 'chol', 'type': 'numeric'},
+                            {'name': 'Freq. Card. Máx.', 'id': 'thalach', 'type': 'numeric'},
+                            {'name': 'Diagnóstico', 'id': 'diagnostico_label', 'type': 'text'}
+                        ],
+                        data=[],
+                        page_size=25,
+                        sort_action="native",
+                        filter_action="native",
+                        row_selectable="single",
+                        selected_rows=[],
+                        style_cell={
+                            'textAlign': 'left',
+                            'padding': '10px',
+                            'fontFamily': 'Arial, sans-serif'
+                        },
+                        style_header={
+                            'backgroundColor': '#007bff',
+                            'color': 'white',
+                            'fontWeight': 'bold',
+                            'textAlign': 'center'
+                        },
+                        style_data_conditional=[
+                            {
+                                'if': {'filter_query': '{diagnostico_label} = "Com Doença"'},
+                                'backgroundColor': '#ffebee',
+                                'color': 'black',
+                            },
+                            {
+                                'if': {'filter_query': '{diagnostico_label} = "Sem Doença"'},
+                                'backgroundColor': '#e8f5e8',
+                                'color': 'black',
+                            }
+                        ],
+                        style_data={
+                            'border': '1px solid #dee2e6'
+                        }
+                    )
+                ])
+            ])
+        ])
+    ], className="mb-4"),
+    
+    # Seção de Detalhes do Paciente Selecionado
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H4("👤 Detalhes do Paciente Selecionado", className="mb-0")),
+                dbc.CardBody([
+                    html.Div(id='detalhes-paciente', children=[
+                        dbc.Alert("Selecione uma linha na tabela acima para ver os detalhes do paciente.", 
+                                color="info", className="text-center")
+                    ])
+                ])
+            ])
+        ])
     ])
 ], fluid=True, className="px-4")
-
-# --- 5. Callbacks (como o aplicativo interage) ---
-# Aqui, a mágica acontece. Use o '@app.callback' para conectar a saída de um
-# componente à entrada de outro.
-# O 'Output' (saída) será o seu gráfico ('id='grafico-distribuicao').
-# Os 'Input' (entradas) serão os menus suspensos e radio buttons.
-# A função será chamada sempre que um 'Input' mudar.
 
 @app.callback(
     Output(component_id='grafico-distribuicao', component_property='figure'),
@@ -214,7 +311,7 @@ def update_distribuicao_graph(variavel, sexo_filtro):
     """
     df_filtrado = df.copy()
     
-    # Aplicar filtro por sexo se selecionado
+    # Aplicar filtro por sexo
     if sexo_filtro != 'all':
         df_filtrado = df_filtrado[df_filtrado['sex'] == sexo_filtro]
     
@@ -386,6 +483,105 @@ def update_tipo_dor_graph(sexo_filtro):
         fig = px.scatter(title=f'Erro ao processar dados: {str(e)}')
     
     return fig
+
+# --- Callbacks para Tabela Interativa ---
+
+@app.callback(
+    Output('tabela-dados', 'data'),
+    [Input('filtro-diagnostico', 'value'),
+     Input('num-registros', 'value')]
+)
+def update_tabela(filtro_diagnostico, num_registros):
+    """Atualizar dados da tabela baseado nos filtros"""
+    df_table = df.copy()
+    
+    # Adicionar coluna de ID
+    df_table['id'] = range(1, len(df_table) + 1)
+    
+    # Adicionar label para diagnóstico
+    df_table['diagnostico_label'] = df_table['has_disease'].map({
+        0: 'Sem Doença',
+        1: 'Com Doença'
+    })
+    
+    # Aplicar filtro de diagnóstico
+    if filtro_diagnostico != 'all':
+        df_table = df_table[df_table['has_disease'] == filtro_diagnostico]
+    
+    # Limitar número de registros
+    df_table = df_table.head(num_registros)
+    
+    # Selecionar apenas as colunas necessárias para a tabela
+    colunas_tabela = ['id', 'age', 'sex_label', 'cp_label', 'trestbps', 'chol', 'thalach', 'diagnostico_label']
+    df_table = df_table[colunas_tabela]
+    
+    return df_table.to_dict('records')
+
+@app.callback(
+    Output('detalhes-paciente', 'children'),
+    [Input('tabela-dados', 'selected_rows'),
+     Input('tabela-dados', 'data')]
+)
+def mostrar_detalhes_paciente(selected_rows, table_data):
+    """Mostrar detalhes do paciente selecionado na tabela"""
+    if not selected_rows or not table_data:
+        return dbc.Alert("Selecione uma linha na tabela acima para ver os detalhes do paciente.", 
+                        color="info", className="text-center")
+    
+    # Obter dados do paciente selecionado
+    paciente = table_data[selected_rows[0]]
+    
+    # Buscar dados completos do paciente no DataFrame original
+    df_paciente = df[df.index == (paciente['id'] - 1)]
+    
+    if df_paciente.empty:
+        return dbc.Alert("Erro ao carregar dados do paciente.", color="danger")
+    
+    p = df_paciente.iloc[0]
+    
+    # Criar layout de detalhes
+    detalhes = dbc.Row([
+        # Coluna 1 - Informações Básicas
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("📋 Informações Básicas", className="mb-0")),
+                dbc.CardBody([
+                    html.P([html.Strong("ID do Paciente: "), paciente['id']]),
+                    html.P([html.Strong("Idade: "), f"{p['age']} anos"]),
+                    html.P([html.Strong("Sexo: "), p['sex_label']]),
+                    html.P([html.Strong("Tipo de Dor no Peito: "), p['cp_label']]),
+                ])
+            ])
+        ], width=6),
+        
+        # Coluna 2 - Dados Clínicos
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("🔬 Dados Clínicos", className="mb-0")),
+                dbc.CardBody([
+                    html.P([html.Strong("Pressão Arterial em Repouso: "), f"{p['trestbps']} mmHg"]),
+                    html.P([html.Strong("Colesterol Sérico: "), f"{p['chol']} mg/dl"]),
+                    html.P([html.Strong("Frequência Cardíaca Máxima: "), f"{p['thalach']} bpm"]),
+                    html.P([html.Strong("Depressão ST: "), f"{p['oldpeak']}" if pd.notna(p['oldpeak']) else "N/A"]),
+                ])
+            ])
+        ], width=6)
+    ], className="mb-3")
+    
+    # Adicionar diagnóstico com cor
+    diagnostico_color = "danger" if p['has_disease'] == 1 else "success"
+    diagnostico_text = "POSITIVO para doença cardíaca" if p['has_disease'] == 1 else "NEGATIVO para doença cardíaca"
+    
+    diagnostico_card = dbc.Row([
+        dbc.Col([
+            dbc.Alert([
+                html.H5("🏥 Diagnóstico", className="mb-2"),
+                html.H6(diagnostico_text, className="mb-0")
+            ], color=diagnostico_color, className="text-center")
+        ])
+    ])
+    
+    return [detalhes, diagnostico_card]
 
 # executar o aplicativo ---
 if __name__ == '__main__':
