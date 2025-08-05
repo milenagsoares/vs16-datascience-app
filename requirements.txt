@@ -1,0 +1,32 @@
+# Arquivo requirements.txt
+# Lista das bibliotecas Python necessárias para o Dashboard de Doenças Cardíacas
+
+# Framework principal para criação do dashboard web interativo
+dash>=3.2.0
+
+# Componentes Bootstrap para Dash (design responsivo e moderno)
+dash-bootstrap-components>=2.0.0
+
+# Biblioteca para criação de gráficos interativos e visualizações
+plotly>=5.24.0
+
+# Biblioteca para manipulação e análise de dados
+pandas>=2.2.0
+
+# Biblioteca para computação científica e arrays multidimensionais
+numpy>=1.26.0
+
+# Biblioteca para machine learning e análise de dados
+scikit-learn>=1.5.0
+
+# Biblioteca para acesso ao UCI ML Repository (datasets)
+ucimlrepo>=0.0.7
+
+# Dependências do sistema (instaladas automaticamente com dash)
+# flask
+# werkzeug
+# jinja2
+# markupsafe
+# itsdangerous
+# click
+# blinker
